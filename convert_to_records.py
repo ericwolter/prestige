@@ -13,7 +13,7 @@ import tensorflow as tf
 
 FLAGS = None
 SIZE = (224, 224)
-PAD_COLOR = (0, 0, 0)
+PAD_COLOR = (128, 128, 128)
 
 
 def _float_feature(value):
@@ -25,7 +25,7 @@ def _bytes_feature(value):
 
 
 def _resize_with_pad(filename):
-    image = Image.open("data/000001-01.JPG")
+    image = Image.open(filename)
     image.thumbnail(SIZE, Image.ANTIALIAS)
     background = Image.new('RGB', SIZE, PAD_COLOR)
     background.paste(
