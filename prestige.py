@@ -48,20 +48,26 @@ def train_input_fn():
                     'ratio_1>2': tf.FixedLenFeature((), tf.float32, default_value=0)}
         parsed_features = tf.parse_single_example(example, features)
 
-        img1_decoded = tf.image.decode_jpeg(parsed_features['img1_raw'], channels=3)
-        img2_decoded = tf.image.decode_jpeg(parsed_features['img2_raw'], channels=3)
+        img1 = tf.image.decode_jpeg(parsed_features['img1_raw'], channels=3)
+        img1 = tf.cast(img1, tf.float32) * (1. / 255)
+        img1 = (img1 - 0.5) * 2
+
+        img2 = tf.image.decode_jpeg(parsed_features['img2_raw'], channels=3)
+        img2 = tf.cast(img2, tf.float32) * (1. / 255)
+        img2 = (img2 - 0.5) * 2
+
         ratio = parsed_features['ratio_1>2']
 
-        features = {'input_1': img1_decoded,
-                    'input_2': img2_decoded}
+        features = {model.input_names[0]: img1,
+                    model.input_names[1]: img2}
         labels = [ratio, 1 - ratio]
 
         return features, labels
 
     dataset = dataset.map(_parse_function)
+    dataset = dataset.shuffle(buffer_size=10000)
+    dataset = dataset.batch(32)
     dataset = dataset.repeat()
-    dataset = dataset.shuffle(1000)
-    dataset = dataset.batch(8)
     return dataset
 
 
@@ -75,19 +81,26 @@ def eval_input_fn():
                     'ratio_1>2': tf.FixedLenFeature((), tf.float32, default_value=0)}
         parsed_features = tf.parse_single_example(example, features)
 
-        img1_decoded = tf.image.decode_jpeg(parsed_features['img1_raw'], channels=3)
-        img2_decoded = tf.image.decode_jpeg(parsed_features['img2_raw'], channels=3)
+        img1 = tf.image.decode_jpeg(parsed_features['img1_raw'], channels=3)
+        img1 = tf.cast(img1, tf.float32) * (1. / 255)
+        img1 = (img1 - 0.5) * 2
+
+        img2 = tf.image.decode_jpeg(parsed_features['img2_raw'], channels=3)
+        img2 = tf.cast(img2, tf.float32) * (1. / 255)
+        img2 = (img2 - 0.5) * 2
+
         ratio = parsed_features['ratio_1>2']
 
-        features = {'input_1': img1_decoded,
-                    'input_2': img2_decoded}
+        features = {model.input_names[0]: img1,
+                    model.input_names[0]: img2}
         labels = [ratio, 1 - ratio]
 
         return features, labels
 
     dataset = dataset.map(_parse_function)
+    dataset = dataset.batch(32)
     dataset = dataset.repeat()
-    dataset = dataset.batch(8)
+
     return dataset
 
 for _ in range(1000):
