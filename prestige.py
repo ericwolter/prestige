@@ -26,12 +26,12 @@ out = keras.layers.Dense(128, activation=tf.nn.tanh)(out)
 out = keras.layers.Dense(2, activation=tf.nn.softmax)(out)
 
 model = keras.Model(inputs=[input1, input2], outputs=out)
-for layer in m.layers:
-    layer.trainable = False
+# for layer in m.layers:
+#     layer.trainable = False
 
 model.summary()
 
-model.compile(optimizer=tf.train.AdamOptimizer(0.001),
+model.compile(optimizer=tf.train.AdamOptimizer(),
               loss='categorical_crossentropy',
               metrics=['accuracy'])
 
@@ -59,7 +59,9 @@ def train_input_fn():
         return features, labels
 
     dataset = dataset.map(_parse_function)
-    dataset = dataset.batch(4)
+    dataset = dataset.repeat()
+    dataset = dataset.shuffle(1000)
+    dataset = dataset.batch(8)
     return dataset
 
 
@@ -84,9 +86,12 @@ def eval_input_fn():
         return features, labels
 
     dataset = dataset.map(_parse_function)
-    dataset = dataset.batch(4)
+    dataset = dataset.repeat()
+    dataset = dataset.batch(8)
     return dataset
 
-
-estimator.train(train_input_fn, steps=2)
-estimator.evaluate(eval_input_fn)
+for _ in range(1000):
+    print('train')
+    estimator.train(train_input_fn, steps=10000)
+    print('eval')
+    estimator.evaluate(eval_input_fn)
