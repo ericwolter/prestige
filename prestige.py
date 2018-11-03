@@ -26,13 +26,13 @@ out = keras.layers.Dense(128, activation=tf.nn.tanh)(out)
 out = keras.layers.Dense(2, activation=tf.nn.softmax)(out)
 
 model = keras.Model(inputs=[input1, input2], outputs=out)
-# for layer in m.layers:
-#     layer.trainable = False
+for layer in m.layers:
+    layer.trainable = False
 
 model.summary()
 
-model.compile(optimizer=tf.train.AdamOptimizer(),
-              loss='categorical_crossentropy',
+model.compile(optimizer=tf.train.MomentumOptimizer(learning_rate=0.001, momentum=0.9),
+              loss='mean_squared_error',
               metrics=['accuracy'])
 
 estimator = tf.keras.estimator.model_to_estimator(keras_model=model, model_dir='model')
@@ -49,11 +49,11 @@ def train_input_fn():
         parsed_features = tf.parse_single_example(example, features)
 
         img1 = tf.image.decode_jpeg(parsed_features['img1_raw'], channels=3)
-        img1 = tf.cast(img1, tf.float32) * (1. / 255)
+        img1 = tf.image.convert_image_dtype(img1, dtype=tf.float32)
         img1 = (img1 - 0.5) * 2
 
         img2 = tf.image.decode_jpeg(parsed_features['img2_raw'], channels=3)
-        img2 = tf.cast(img2, tf.float32) * (1. / 255)
+        img2 = tf.image.convert_image_dtype(img2, dtype=tf.float32)
         img2 = (img2 - 0.5) * 2
 
         ratio = parsed_features['ratio_1>2']
@@ -65,7 +65,7 @@ def train_input_fn():
         return features, labels
 
     dataset = dataset.map(_parse_function)
-    dataset = dataset.shuffle(buffer_size=10000)
+    #dataset = dataset.shuffle(buffer_size=10000)
     dataset = dataset.batch(32)
     dataset = dataset.repeat()
     return dataset
@@ -82,23 +82,23 @@ def eval_input_fn():
         parsed_features = tf.parse_single_example(example, features)
 
         img1 = tf.image.decode_jpeg(parsed_features['img1_raw'], channels=3)
-        img1 = tf.cast(img1, tf.float32) * (1. / 255)
+        img1 = tf.image.convert_image_dtype(img1, dtype=tf.float32)
         img1 = (img1 - 0.5) * 2
 
         img2 = tf.image.decode_jpeg(parsed_features['img2_raw'], channels=3)
-        img2 = tf.cast(img2, tf.float32) * (1. / 255)
+        img2 = tf.image.convert_image_dtype(img2, dtype=tf.float32)
         img2 = (img2 - 0.5) * 2
 
         ratio = parsed_features['ratio_1>2']
 
         features = {model.input_names[0]: img1,
-                    model.input_names[0]: img2}
+                    model.input_names[1]: img2}
         labels = [ratio, 1 - ratio]
 
         return features, labels
 
     dataset = dataset.map(_parse_function)
-    dataset = dataset.batch(32)
+    dataset = dataset.batch(2)
     dataset = dataset.repeat()
 
     return dataset
