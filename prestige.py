@@ -6,6 +6,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 from tensorflow import keras
+tf.logging.set_verbosity(tf.logging.INFO)
 
 SIZE = 224
 
@@ -26,13 +27,11 @@ out = keras.layers.Dense(128, activation=tf.nn.tanh)(out)
 out = keras.layers.Dense(2, activation=tf.nn.softmax)(out)
 
 model = keras.Model(inputs=[input1, input2], outputs=out)
-for layer in m.layers:
-    layer.trainable = False
 
 model.summary()
 
-model.compile(optimizer=tf.train.MomentumOptimizer(learning_rate=0.001, momentum=0.9),
-              loss='mean_squared_error',
+model.compile(optimizer=tf.train.AdamOptimizer(learning_rate=0.00001),
+              loss='categorical_crossentropy',
               metrics=['accuracy'])
 
 estimator = tf.keras.estimator.model_to_estimator(keras_model=model, model_dir='model')
@@ -48,26 +47,33 @@ def train_input_fn():
                     'ratio_1>2': tf.FixedLenFeature((), tf.float32, default_value=0)}
         parsed_features = tf.parse_single_example(example, features)
 
-        img1 = tf.image.decode_jpeg(parsed_features['img1_raw'], channels=3)
-        img1 = tf.image.convert_image_dtype(img1, dtype=tf.float32)
-        img1 = (img1 - 0.5) * 2
+        img1 = tf.image.decode_jpeg(parsed_features['img1_raw'])
+        img1 = tf.image.random_flip_left_right(img1)
+        img1 = tf.to_float(img1)    
+        img1 = tf.divide(img1, 128.)
+        img1 = tf.subtract(img1, 1.)
 
-        img2 = tf.image.decode_jpeg(parsed_features['img2_raw'], channels=3)
-        img2 = tf.image.convert_image_dtype(img2, dtype=tf.float32)
-        img2 = (img2 - 0.5) * 2
+        img2 = tf.image.decode_jpeg(parsed_features['img2_raw'])
+        img2 = tf.image.random_flip_left_right(img2)
+        img2 = tf.to_float(img2)    
+        img2 = tf.divide(img2, 128.)
+        img2 = tf.subtract(img2, 1.)
 
         ratio = parsed_features['ratio_1>2']
 
         features = {model.input_names[0]: img1,
                     model.input_names[1]: img2}
-        labels = [ratio, 1 - ratio]
+
+        def f1(): return [tf.constant(0), tf.constant(1)]
+        def f2(): return [tf.constant(1), tf.constant(0)]
+        labels = tf.cond(ratio < tf.constant(0.5), f1, f2)
 
         return features, labels
 
-    dataset = dataset.map(_parse_function)
-    #dataset = dataset.shuffle(buffer_size=10000)
-    dataset = dataset.batch(32)
-    dataset = dataset.repeat()
+    dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=100))  
+    dataset = dataset.map(_parse_function, num_parallel_calls=4)
+    dataset = dataset.batch(8)
+    dataset = dataset.prefetch(buffer_size=8)
     return dataset
 
 
@@ -81,30 +87,34 @@ def eval_input_fn():
                     'ratio_1>2': tf.FixedLenFeature((), tf.float32, default_value=0)}
         parsed_features = tf.parse_single_example(example, features)
 
-        img1 = tf.image.decode_jpeg(parsed_features['img1_raw'], channels=3)
-        img1 = tf.image.convert_image_dtype(img1, dtype=tf.float32)
-        img1 = (img1 - 0.5) * 2
+        img1 = tf.image.decode_jpeg(parsed_features['img1_raw'])
+        img1 = tf.to_float(img1)    
+        img1 = tf.divide(img1, 128.)
+        img1 = tf.subtract(img1, 1.)
 
-        img2 = tf.image.decode_jpeg(parsed_features['img2_raw'], channels=3)
-        img2 = tf.image.convert_image_dtype(img2, dtype=tf.float32)
-        img2 = (img2 - 0.5) * 2
+        img2 = tf.image.decode_jpeg(parsed_features['img2_raw'])
+        img2 = tf.to_float(img2)    
+        img2 = tf.divide(img2, 128.)
+        img2 = tf.subtract(img2, 1.)
 
         ratio = parsed_features['ratio_1>2']
 
         features = {model.input_names[0]: img1,
                     model.input_names[1]: img2}
-        labels = [ratio, 1 - ratio]
+
+        def f1(): return [tf.constant(0), tf.constant(1)]
+        def f2(): return [tf.constant(1), tf.constant(0)]
+        labels = tf.cond(ratio < tf.constant(0.5), f1, f2)
 
         return features, labels
 
-    dataset = dataset.map(_parse_function)
-    dataset = dataset.batch(2)
-    dataset = dataset.repeat()
+    dataset = dataset.map(_parse_function, num_parallel_calls=4)
+    dataset = dataset.batch(8)
 
     return dataset
 
-for _ in range(1000):
+for _ in range(10000):
     print('train')
-    estimator.train(train_input_fn, steps=10000)
+    estimator.train(train_input_fn, steps=1000)
     print('eval')
     estimator.evaluate(eval_input_fn)
