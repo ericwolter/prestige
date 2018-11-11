@@ -1,4 +1,6 @@
 data/
+fake_triage/
+fake_data
 model/
 
 # General
