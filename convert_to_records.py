@@ -76,7 +76,7 @@ def main(unused_argv):
     base_directory = os.path.join(FLAGS.source, 'train_val', 'train_val')
     convert_to(os.path.join(base_directory, 'train_val_imgs'),
                os.path.join(base_directory, 'val_pairlist.txt'),
-               'validation')
+               'eval')
     convert_to(os.path.join(base_directory, 'train_val_imgs'),
                os.path.join(base_directory, 'train_pairlist.txt'),
                'train')
