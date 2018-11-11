@@ -17,13 +17,15 @@ def _parse_function(example):
                 'ratio_1>2': tf.FixedLenFeature((), tf.float32, default_value=0)}
     parsed_features = tf.parse_single_example(example, features)
 
-    img1 = tf.image.decode_jpeg(parsed_features['img1_raw'], channels=3)
-    img1 = tf.image.convert_image_dtype(img1, dtype=tf.float32)
-    img1 = (img1 - 0.5) * 2
+    img1 = tf.image.decode_jpeg(parsed_features['img1_raw'])
+    img1 = tf.to_float(img1)    
+    img1 = tf.divide(img1, 128.)
+    img1 = tf.subtract(img1, 1.)
 
-    img2 = tf.image.decode_jpeg(parsed_features['img2_raw'], channels=3)
-    img2 = tf.image.convert_image_dtype(img2, dtype=tf.float32)
-    img2 = (img2 - 0.5) * 2
+    img2 = tf.image.decode_jpeg(parsed_features['img2_raw'])
+    img2 = tf.to_float(img1)    
+    img2 = tf.divide(img1, 128.)
+    img2 = tf.subtract(img1, 1.)
 
     ratio = parsed_features['ratio_1>2']
 
