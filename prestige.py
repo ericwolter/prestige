@@ -17,16 +17,18 @@ input2 = keras.layers.Input(input_shape)
 
 # first stage - siamese network with difference
 m = keras.applications.MobileNetV2(input_shape=input_shape, include_top=False, weights='imagenet', pooling='avg')
+    
 feature1 = m(input1)
 feature2 = m(input2)
-subtract = keras.layers.Subtract()([feature1, feature2])
+x = keras.layers.Subtract()([feature1, feature2])
 
 # second stage - 2-layer perceptron with 2-way softmax
-out = keras.layers.Dense(128, activation=tf.nn.tanh)(subtract)
-out = keras.layers.Dense(128, activation=tf.nn.tanh)(out)
-out = keras.layers.Dense(2, activation=tf.nn.softmax)(out)
+x = keras.layers.Dropout(0.5)(x)
+x = keras.layers.Dense(128, activation=tf.nn.tanh)(x)
+x = keras.layers.Dense(128, activation=tf.nn.tanh)(x)
+x = keras.layers.Dense(2, activation=tf.nn.softmax)(x)
 
-model = keras.Model(inputs=[input1, input2], outputs=out)
+model = keras.Model(inputs=[input1, input2], outputs=x)
 
 model.summary()
 
@@ -70,7 +72,7 @@ def train_input_fn():
 
         return features, labels
 
-    dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=100))  
+    dataset = dataset.apply(tf.contrib.data.shuffle_and_repeat(buffer_size=1000))  
     dataset = dataset.map(_parse_function, num_parallel_calls=4)
     dataset = dataset.batch(8)
     dataset = dataset.prefetch(buffer_size=8)
