@@ -54,9 +54,6 @@ def convert_to(image_directory, pairlist, name):
             photo1_filename = '%06d-%02d.JPG' % (series_id, photo1_ind)
             photo2_filename = '%06d-%02d.JPG' % (series_id, photo2_ind)
 
-            img1 = Image.open(os.path.join(image_directory, photo1_filename))
-            img2 = Image.open(os.path.join(image_directory, photo1_filename))
-
             img1 = _resize_with_pad(os.path.join(image_directory, photo1_filename))
             img2 = _resize_with_pad(os.path.join(image_directory, photo2_filename))
 
